@@ -150,6 +150,27 @@ def actividad():
 
     return jsonify({"mensaje": "Actividad guardada correctamente"})
 
+@app.route('/actividades', methods=['GET'])
+def obtener_actividades():
+    con = conectar()
+    cursor = con.cursor()
+
+    cursor.execute("SELECT * FROM actividades ORDER BY id DESC")
+    datos = cursor.fetchall()
+
+    con.close()
+
+    lista = []
+    for fila in datos:
+        lista.append({
+            "tipo": fila[1],
+            "descripcion": fila[2],
+            "cantidad": fila[3],
+            "fecha": fila[4],
+            "horas": fila[5]
+        })
+
+    return jsonify(lista)
 # ================================
 # 🚀 EJECUTAR SERVIDOR
 # ================================
