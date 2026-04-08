@@ -7,6 +7,7 @@ CORS(app)
 
 DB = "basedatos.db"
 
+# 🔹 Conexión a la base de datos
 def conectar():
     return sqlite3.connect(DB)
 
@@ -41,7 +42,7 @@ def registro():
             (data['nombre'], data['cedula'], data['password'])
         )
         con.commit()
-        mensaje = "Usuario registrado correctamente"
+        mensaje = "✅ Usuario registrado correctamente"
         status = 200
     except sqlite3.IntegrityError:
         mensaje = "❌ Ya existe un usuario con esa cédula"
@@ -98,7 +99,7 @@ def residuos():
 
     con.commit()
     con.close()
-    return jsonify({"mensaje": "Residuo guardado correctamente"})
+    return jsonify({"mensaje": "✅ Residuo guardado correctamente"})
 
 # ================================
 # 🤝 REGISTRO DE ACTIVIDADES
@@ -120,16 +121,18 @@ def actividad():
         )
     """)
 
-    cantidad = float(data['cantidadTratada']) if data['cantidadTratada'] not in ["", "N/A"] else 0
+    # Convertir cantidad y horas a números, manejar vacíos
+    cantidad = float(data['cantidadTratada']) if data.get('cantidadTratada') not in ["", "N/A", None] else 0
+    horas = float(data['horas']) if data.get('horas') not in ["", None] else 0
 
     cursor.execute("""
         INSERT INTO actividades (tipo, descripcion, cantidad, fecha, horas)
         VALUES (?, ?, ?, ?, ?)
-    """, (data['tipo'], data['descripcion'], cantidad, data['fecha'], float(data['horas'])))
+    """, (data['tipo'], data['descripcion'], cantidad, data['fecha'], horas))
 
     con.commit()
     con.close()
-    return jsonify({"mensaje": "Actividad guardada correctamente"})
+    return jsonify({"mensaje": "✅ Actividad guardada correctamente"})
 
 # ================================
 # EJECUTAR SERVIDOR
