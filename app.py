@@ -171,6 +171,27 @@ def obtener_actividades():
         })
 
     return jsonify(lista)
+
+@app.route('/residuos', methods=['GET'])
+def obtener_residuos():
+    con = conectar()
+    cursor = con.cursor()
+
+    cursor.execute("SELECT * FROM residuos ORDER BY id DESC")
+    datos = cursor.fetchall()
+    con.close()
+
+    lista = []
+    for fila in datos:
+        lista.append({
+            "tipo": fila[1],
+            "peso": fila[2],
+            "fecha": fila[3],
+            "origen": fila[4],
+            "obs": fila[5]
+        })
+
+    return jsonify(lista)
 # ================================
 # 🚀 EJECUTAR SERVIDOR
 # ================================
