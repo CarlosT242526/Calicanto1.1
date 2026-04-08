@@ -5,51 +5,47 @@ import sqlite3
 app = Flask(__name__)
 CORS(app)
 
-DB = "basedatos.db"
-
 # 🔹 Conexión a la base de datos
 def conectar():
-    return sqlite3.connect(DB)
+    return sqlite3.connect("basedatos.db")
 
-# ================================
-# RUTA DE PRUEBA
-# ================================
+# 🔹 RUTA PRINCIPAL (para probar servidor)
 @app.route('/')
 def inicio():
     return "Servidor activo"
 
 # ================================
-# 👤 REGISTRO DE SOCIOS
+# 👤 REGISTRO DE USUARIOS
 # ================================
 @app.route('/registro', methods=['POST'])
 def registro():
     data = request.get_json()
+
     con = conectar()
     cursor = con.cursor()
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS socios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT,
-            cedula TEXT UNIQUE,
-            password TEXT
-        )
+    CREATE TABLE IF NOT EXISTS socios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT,
+        cedula TEXT,
+        password TEXT
+    )
     """)
 
-    try:
-        cursor.execute(
-            "INSERT INTO socios (nombre, cedula, password) VALUES (?, ?, ?)",
-            (data['nombre'], data['cedula'], data['password'])
+    cursor.execute(
+        "INSERT INTO socios (nombre, cedula, password) VALUES (?, ?, ?)",
+        (
+            data['nombre'].strip(),
+            data['cedula'].strip(),
+            data['password'].strip()
         )
-        con.commit()
-        mensaje = "✅ Usuario registrado correctamente"
-        status = 200
-    except sqlite3.IntegrityError:
-        mensaje = "❌ Ya existe un usuario con esa cédula"
-        status = 400
+    )
 
+    con.commit()
     con.close()
-    return jsonify({"mensaje": mensaje}), status
+
+    return jsonify({"mensaje": "Usuario registrado correctamente"})
 
 # ================================
 # 🔐 LOGIN
@@ -57,49 +53,65 @@ def registro():
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
+
+    cedula = data['cedula'].strip()
+    password = data['password'].strip()
+
     con = conectar()
     cursor = con.cursor()
 
-    cursor.execute(
-        "SELECT * FROM socios WHERE cedula=? AND password=?",
-        (data['cedula'], data['password'])
-    )
+    # 🔍 Buscar usuario SOLO por cédula
+    cursor.execute("SELECT * FROM socios WHERE cedula=?", (cedula,))
     usuario = cursor.fetchone()
+
     con.close()
 
-    if usuario:
-        return jsonify({"mensaje": f"✅ Bienvenido {usuario[1]}"})
-    else:
-        return jsonify({"mensaje": "❌ La cédula o la contraseña no coinciden. Si no tienes cuenta, por favor regístrate."}), 401
+    # ❌ Si no existe
+    if not usuario:
+        return jsonify({"mensaje": "Usuario no existe"})
 
+    # ❌ Si la contraseña no coincide
+    if usuario[3] != password:
+        return jsonify({"mensaje": "Contraseña incorrecta"})
+
+    # ✅ Todo correcto
+    return jsonify({"mensaje": "Login correcto"})
 # ================================
 # ♻️ REGISTRO DE RESIDUOS
 # ================================
 @app.route('/residuos', methods=['POST'])
 def residuos():
     data = request.get_json()
+
     con = conectar()
     cursor = con.cursor()
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS residuos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tipo TEXT,
-            peso REAL,
-            fecha TEXT,
-            origen TEXT,
-            observaciones TEXT
-        )
+    CREATE TABLE IF NOT EXISTS residuos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tipo TEXT,
+        peso REAL,
+        fecha TEXT,
+        origen TEXT,
+        observaciones TEXT
+    )
     """)
 
     cursor.execute("""
         INSERT INTO residuos (tipo, peso, fecha, origen, observaciones)
         VALUES (?, ?, ?, ?, ?)
-    """, (data['tipo'], data['peso'], data['fecha'], data['origen'], data['obs']))
+    """, (
+        data['tipo'],
+        data['peso'],
+        data['fecha'],
+        data['origen'],
+        data['obs']
+    ))
 
     con.commit()
     con.close()
-    return jsonify({"mensaje": "✅ Residuo guardado correctamente"})
+
+    return jsonify({"mensaje": "Residuo guardado correctamente"})
 
 # ================================
 # 🤝 REGISTRO DE ACTIVIDADES
@@ -107,35 +119,39 @@ def residuos():
 @app.route('/actividad', methods=['POST'])
 def actividad():
     data = request.get_json()
+
     con = conectar()
     cursor = con.cursor()
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS actividades (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tipo TEXT,
-            descripcion TEXT,
-            cantidad REAL,
-            fecha TEXT,
-            horas REAL
-        )
+    CREATE TABLE IF NOT EXISTS actividades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tipo TEXT,
+        descripcion TEXT,
+        cantidad TEXT,
+        fecha TEXT,
+        horas TEXT
+    )
     """)
-
-    # Convertir cantidad y horas a números, manejar vacíos
-    cantidad = float(data['cantidadTratada']) if data.get('cantidadTratada') not in ["", "N/A", None] else 0
-    horas = float(data['horas']) if data.get('horas') not in ["", None] else 0
 
     cursor.execute("""
         INSERT INTO actividades (tipo, descripcion, cantidad, fecha, horas)
         VALUES (?, ?, ?, ?, ?)
-    """, (data['tipo'], data['descripcion'], cantidad, data['fecha'], horas))
+    """, (
+        data['tipo'],
+        data['descripcion'],
+        data['cantidadTratada'],
+        data['fecha'],
+        data['horas']
+    ))
 
     con.commit()
     con.close()
-    return jsonify({"mensaje": "✅ Actividad guardada correctamente"})
+
+    return jsonify({"mensaje": "Actividad guardada correctamente"})
 
 # ================================
-# EJECUTAR SERVIDOR
+# 🚀 EJECUTAR SERVIDOR
 # ================================
 if __name__ == '__main__':
     app.run(debug=True)
